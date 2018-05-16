@@ -6,6 +6,7 @@ GEMSPEC = Gem::Specification.load('rotoscope.gemspec')
 
 require 'bundler/gem_tasks'
 require 'rubygems/package_task'
+require 'English'
 
 Gem::PackageTask.new(GEMSPEC) do |pkg|
 end
@@ -44,9 +45,10 @@ namespace :lint do
   task ruby: :rubocop
 
   task :c do
-    grep_matches = system("find '#{__dir__}/ext' -iname '*.c' -o -iname '*.h' " \
-      "| xargs clang-format -style=file -output-replacements-xml | grep -q '<replacement '")
-    if grep_matches
+    grep_match_count = `find '#{__dir__}/ext' -iname '*.c' -o -iname '*.h' \
+      | xargs clang-format -style=file -output-replacements-xml | grep -c '<replacement '`
+    abort if $CHILD_STATUS.exitstatus >= 2
+    if Integer(grep_match_count) > 0
       abort "C format changes are needed. Please run bin/fmt"
     end
   end
