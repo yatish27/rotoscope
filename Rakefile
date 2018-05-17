@@ -45,11 +45,18 @@ namespace :lint do
   task ruby: :rubocop
 
   task :c do
-    grep_match_count = `find '#{__dir__}/ext' -iname '*.c' -o -iname '*.h' \
-      | xargs clang-format -style=file -output-replacements-xml | grep -c '<replacement '`
-    abort if $CHILD_STATUS.exitstatus >= 2
-    if Integer(grep_match_count) > 0
-      abort "C format changes are needed. Please run bin/fmt"
+    diff_output = ''.dup
+    Dir['ext/rotoscope/*.[ch]'].each do |filename|
+      diff_output << `bash -c 'diff -u #{filename.inspect} <(clang-format -style=file #{filename.inspect})'`
+      abort "clang-format diff failed" if $CHILD_STATUS.exitstatus > 1
+    end
+    unless diff_output.empty?
+      STDERR.puts "Using clang-format version: #{`clang-format --version`}"
+      STDERR.puts "C format changes are needed:"
+      puts '```diff'
+      STDERR.puts diff_output
+      puts '```'
+      abort "Please run bin/fmt to make these format changes"
     end
   end
 end
